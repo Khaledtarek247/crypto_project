@@ -40,12 +40,13 @@ crypto_project/
 ├─ main.py                  # Streamlit app entry point
 ├─ app/
 │  ├─ __init__.py
+│  ├─ export_utils.py       # PDF and CSV report generation
 │  ├─ session_state.py      # Session defaults and initialization
 │  └─ storage.py            # Output directory and file persistence helpers
 ├─ core/
 │  ├─ __init__.py
 │  └─ crypto_utils.py       # Core encryption/decryption and hashing logic
-├─ output/                  # Generated encrypted/decrypted files
+├─ output/                  # Generated encrypted/decrypted files grouped by input name
 ├─ requirements.txt
 └─ README.md
 ```
@@ -53,10 +54,21 @@ crypto_project/
 ## Why This Structure Is Better
 
 - Clear separation of concerns:
-	- UI workflow in main.py
-	- app-level utilities in app/
-	- cryptography engine in core/
+- UI workflow in main.py
+- app-level utilities in app/
+- cryptography engine in core/
 - Easier future testing and maintenance
+
+## Output Organization
+
+Each uploaded input now gets its own subfolder under `output/`.
+
+Example:
+
+- `output/data/data_aes_encrypted.bin`
+- `output/data/data_des_encrypted.bin`
+- `output/data/data_aes_decrypted.txt`
+- `output/data/data_des_decrypted.txt`
 
 ## Installation
 
@@ -86,13 +98,13 @@ streamlit run main.py
 
 ## Output Files
 
-Generated files are saved in output/.
+Generated files are saved in per-input subfolders under `output/`.
 
 Examples:
-- input_aes_encrypted.bin
-- input_des_encrypted.bin
-- input_aes_decrypted.txt
-- input_des_decrypted.txt
+- `output/input/input_aes_encrypted.bin`
+- `output/input/input_des_encrypted.bin`
+- `output/input/input_aes_decrypted.txt`
+- `output/input/input_des_decrypted.txt`
 
 ## Verification Logic
 

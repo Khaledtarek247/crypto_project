@@ -13,7 +13,7 @@ from core.crypto_utils import (
 )
 from app.session_state import DEFAULT_SESSION_STATE, init_session_state
 from app.storage import ensure_output_dir, load_from_disk, save_to_output
-from core.export_utils import generate_pdf_report, generate_csv_report
+from app.export_utils import generate_pdf_report, generate_csv_report
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
