@@ -46,7 +46,8 @@ crypto_project/
 ├─ core/
 │  ├─ __init__.py
 │  └─ crypto_utils.py       # Core encryption/decryption and hashing logic
-├─ output/                  # Generated encrypted/decrypted files grouped by input name
+├─ output/                  # Generated encrypted/decrypted files grouped by input name                   
+├─ data /                   # Sample data for testing 
 ├─ requirements.txt
 └─ README.md
 ```
