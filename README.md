@@ -31,7 +31,7 @@ GCM mode in AES provides both:
 - confidentiality (encryption)
 - integrity (tamper detection through authentication tag)
 
-## Professional Project Structure
+## Project Structure
 
 The project has been restructured to keep architecture clearer without changing cryptographic behavior.
 
