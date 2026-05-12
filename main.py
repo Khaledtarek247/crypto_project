@@ -1,10 +1,8 @@
 import streamlit as st
 import time
 import base64
-import hashlib
-import os
 from pathlib import Path
-from crypto_utils import (
+from core.crypto_utils import (
     encrypt_aes, decrypt_aes,
     encrypt_aes_gcm, decrypt_aes_gcm,
     encrypt_des, decrypt_des,
@@ -13,6 +11,9 @@ from crypto_utils import (
     key_fingerprint,
     compute_sha256,
 )
+from app.session_state import DEFAULT_SESSION_STATE, init_session_state
+from app.storage import ensure_output_dir, load_from_disk, save_to_output
+from core.export_utils import generate_pdf_report, generate_csv_report
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -22,8 +23,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-OUTPUT_DIR = Path(__file__).parent / "output"
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR = ensure_output_dir(Path(__file__).parent)
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -236,50 +236,8 @@ def copy_button(label: str, text: str):
     with st.expander(f"📋 Copy {label} (Base64)"):
         st.code(base64.b64encode(text).decode() if isinstance(text, bytes) else text, language="text")
 
-def save_to_output(filename: str, data: bytes) -> Path:
-    path = OUTPUT_DIR / filename
-    path.write_bytes(data)
-    return path
-
-
-def load_from_disk(path_str: str | None) -> bytes | None:
-    """
-    Option A — Re-read ciphertext from disk immediately before decrypting.
-
-    This makes on-disk tampering detectable:
-      • Non-GCM modes: decrypted bytes won't match the original, so
-        verify_files() will return False and the Verify step flags a mismatch.
-      • GCM mode: decrypt_aes_gcm() raises ValueError on tag failure
-        before Verify is even reached.
-
-    Returns None (with a Streamlit error) if the file is missing.
-    """
-    if not path_str:
-        st.error("⚠️ No saved ciphertext path found — please re-encrypt first.")
-        return None
-    p = Path(path_str)
-    if not p.exists():
-        st.error(f"⚠️ Ciphertext file not found on disk: `{p}`")
-        return None
-    return p.read_bytes()
-
 # ── Session state ─────────────────────────────────────────────────────────────
-_def = dict(
-    plaintext=None, filename="data.bin",
-    aes_enc=None, des_enc=None, aes_key=None, des_key=None,
-    aes_meta=None, des_meta=None, aes_enc_t=0.0, des_enc_t=0.0,
-    aes_dec=None, des_dec=None, aes_dec_t=0.0, des_dec_t=0.0,
-    aes_ok=None, des_ok=None,
-    stage_encrypted=False, stage_decrypted=False, stage_verified=False,
-    aes_key_size=256, aes_mode="CBC", des_mode="CBC",
-    saved_enc_aes=None, saved_enc_des=None,
-    saved_dec_aes=None, saved_dec_des=None,
-    # new: which step to auto-scroll to after rerun
-    scroll_to=None,
-)
-for k, v in _def.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+init_session_state(st.session_state)
 S = st.session_state
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -377,7 +335,7 @@ st.markdown("---")
 
 # ── Reset ─────────────────────────────────────────────────────────────────────
 if reset_btn:
-    for k, v in _def.items():
+    for k, v in DEFAULT_SESSION_STATE.items():
         st.session_state[k] = v
     st.rerun()
 
@@ -412,8 +370,8 @@ if encrypt_btn:
             des_enc_t = time.perf_counter() - t0
 
             fn_stem = Path(fn).stem
-            saved_enc_aes = save_to_output(f"{fn_stem}_aes_encrypted.bin", aes_enc)
-            saved_enc_des = save_to_output(f"{fn_stem}_des_encrypted.bin", des_enc)
+            saved_enc_aes = save_to_output(OUTPUT_DIR, f"{fn_stem}_aes_encrypted.bin", aes_enc)
+            saved_enc_des = save_to_output(OUTPUT_DIR, f"{fn_stem}_des_encrypted.bin", des_enc)
 
         S.plaintext=plain; S.filename=fn
         S.aes_key=aes_key; S.des_key=des_key
@@ -461,8 +419,8 @@ if decrypt_btn and S.stage_encrypted:
 
         fn_stem = Path(S.filename).stem
         fn_ext  = Path(S.filename).suffix or ".txt"
-        saved_dec_aes = save_to_output(f"{fn_stem}_aes_decrypted{fn_ext}", aes_dec)
-        saved_dec_des = save_to_output(f"{fn_stem}_des_decrypted{fn_ext}", des_dec)
+        saved_dec_aes = save_to_output(OUTPUT_DIR, f"{fn_stem}_aes_decrypted{fn_ext}", aes_dec)
+        saved_dec_des = save_to_output(OUTPUT_DIR, f"{fn_stem}_des_decrypted{fn_ext}", des_dec)
 
     S.aes_dec=aes_dec; S.des_dec=des_dec
     S.saved_dec_aes=str(saved_dec_aes); S.saved_dec_des=str(saved_dec_des)
@@ -737,6 +695,42 @@ if S.stage_verified:
                 <li>Use 3DES or AES in production</li>
             </ul>
         </div>""", unsafe_allow_html=True)
+
+    # ── Export Results ────────────────────────────────────────────────
+    section("📥 Export Results")
+    export_col1, export_col2 = st.columns(2, gap="medium")
+    
+    with export_col1:
+        if st.button("📄 Export as PDF", use_container_width=True, key="export_pdf"):
+            try:
+                pdf_data = generate_pdf_report(S)
+                st.download_button(
+                    label="⬇️ Download PDF Report",
+                    data=pdf_data,
+                    file_name="CryptoLab_Report.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="download_pdf"
+                )
+                st.success("✅ PDF report generated successfully!")
+            except Exception as e:
+                st.error(f"❌ Error generating PDF: {str(e)}")
+    
+    with export_col2:
+        if st.button("📊 Export as CSV", use_container_width=True, key="export_csv"):
+            try:
+                csv_data = generate_csv_report(S)
+                st.download_button(
+                    label="⬇️ Download CSV Report",
+                    data=csv_data,
+                    file_name="CryptoLab_Report.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="download_csv"
+                )
+                st.success("✅ CSV report generated successfully!")
+            except Exception as e:
+                st.error(f"❌ Error generating CSV: {str(e)}")
 
 # ── Auto-scroll after action ──────────────────────────────────────────────────
 if S.scroll_to:

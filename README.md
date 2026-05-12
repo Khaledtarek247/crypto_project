@@ -1,71 +1,120 @@
-# 🔐 CryptoLab — Algorithm Comparison (Path 2)
+# CryptoLab: Algorithm Comparison (Path 2)
 
-A Streamlit application that encrypts real data using **AES** and **DES** side-by-side, then compares ciphertext output, execution time, key size, block size, and security notes.
+CryptoLab is a Streamlit app that encrypts the same input with AES and DES, then compares output size, speed, and integrity verification results.
 
----
+This project is intended for education and demonstration.
 
-## Project Structure
+## What This Project Does
 
-```
+- Encrypts one input with AES and DES side by side
+- Decrypts both ciphertexts
+- Verifies decrypted data against the original
+- Shows timing and algorithm/security comparison in a visual UI
+- Saves encrypted and decrypted files in the output folder
+
+## Algorithms and Modes
+
+### AES
+- Key sizes: 128, 192, 256 bits
+- Modes: CBC, CFB, OFB, CTR, GCM
+
+### DES
+- Effective key size: 56 bits
+- Modes: CBC, CFB, OFB
+
+## Important Security Note
+
+DES is deprecated and included only for learning comparison.
+AES is the modern secure option.
+
+GCM mode in AES provides both:
+- confidentiality (encryption)
+- integrity (tamper detection through authentication tag)
+
+## Professional Project Structure
+
+The project has been restructured to keep architecture clearer without changing cryptographic behavior.
+
+```text
 crypto_project/
-├── main.py            # Streamlit UI
-├── crypto_utils.py    # Encryption/decryption logic
-├── requirements.txt   # Python dependencies
-└── README.md
+├─ main.py                  # Streamlit app entry point
+├─ app/
+│  ├─ __init__.py
+│  ├─ session_state.py      # Session defaults and initialization
+│  └─ storage.py            # Output directory and file persistence helpers
+├─ core/
+│  ├─ __init__.py
+│  └─ crypto_utils.py       # Core encryption/decryption and hashing logic
+├─ output/                  # Generated encrypted/decrypted files
+├─ requirements.txt
+└─ README.md
 ```
 
----
+## Why This Structure Is Better
 
-## How to Run
+- Clear separation of concerns:
+	- UI workflow in main.py
+	- app-level utilities in app/
+	- cryptography engine in core/
+- Easier future testing and maintenance
 
-### 1. Install dependencies
+## Installation
+
+1. Create and activate a virtual environment (recommended).
+2. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Launch the app
+## Run the App
+
 ```bash
 streamlit run main.py
 ```
 
----
+## App Workflow
 
-## Features
+1. Choose input source:
+	 - Upload a file, or
+	 - Enter text manually
+2. Select AES key size and mode
+3. Select DES mode
+4. Click Encrypt
+5. Click Decrypt
+6. Click Verify
 
-- **Path 2: Algorithm Comparison** — AES vs DES on the same data
-- Supports **AES-128 / AES-192 / AES-256** with CBC, CFB, OFB, CTR modes
-- Supports **DES** with CBC, CFB, OFB modes
-- Three input options: upload a file, paste text, or use a generated sample CSV
-- Displays ciphertext side-by-side in Base64 preview
-- SHA-256 hash verification of decrypted vs original data
-- Visual timing bar charts (encryption & decryption speed)
-- Download buttons for ciphertexts and decrypted files
-- Security notes explaining why DES is deprecated
+## Output Files
 
----
+Generated files are saved in output/.
 
-## Algorithms Used
+Examples:
+- input_aes_encrypted.bin
+- input_des_encrypted.bin
+- input_aes_decrypted.txt
+- input_des_decrypted.txt
 
-| Property       | AES                        | DES                     |
-|---------------|---------------------------|-------------------------|
-| Key size      | 128 / 192 / 256 bits       | 56 bits (64-bit w/ parity) |
-| Block size    | 128 bits (16 bytes)        | 64 bits (8 bytes)       |
-| Status        | ✅ Modern standard (NIST)  | ⚠️ Deprecated (2005)    |
-| Library       | PyCryptodome               | PyCryptodome            |
+## Verification Logic
 
----
+The app validates decryption in two ways:
+- byte-for-byte comparison
+- SHA-256 hash comparison
 
-## Security Note
+For AES-GCM, tampering is also detected during decryption via tag verification.
 
-DES is included **for educational comparison only**. Its 56-bit key is vulnerable to brute-force attacks. AES is the recommended algorithm for all modern applications.
+## Dependencies
 
----
+- streamlit
+- pycryptodome
 
-## Deliverables Covered
+See requirements.txt for versions.
 
-- ✅ Source code (main.py, crypto_utils.py)
-- ✅ Sample input data (generated CSV or file upload)
-- ✅ Encrypted output (downloadable .bin files)
-- ✅ Decrypted output (downloadable recovered files)
-- ✅ Verification message ("Decryption successful: original data matched")
-- ✅ Algorithm comparison (ciphertext size, timing, key details)
+## Current Scope
+
+- Built for learning, benchmarking, and comparison reports
+- Not a production key-management system
+- Performance values depend on local machine and run conditions
+
+## License / Usage
+
+Use this project for academic and educational purposes.
